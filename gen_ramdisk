@@ -1,0 +1,37 @@
+#!/bin/sh
+#simple GUI create ramdisk @ $MOUNTPOINT
+
+MOUNTPOINT="/initrd/ramdisk2"
+
+#Prompt for size
+SIZE="$(Xdialog --title "Ramdisk" --spinbox "Size of ramdisk in megabytes" 0 0 1 2147483647 200 MB 2>&1)"
+if [ $? -ne 0 ]; then
+	Xdialog --title "Ramdisk" --infobox "Aborted" 0 0 5000
+	echo "Aborted"
+	exit
+fi
+
+#make the mountpoint
+mkdir -p "$MOUNTPOINT"
+
+#mount the ramdisk
+mount -t tmpfs -o size=${SIZE}m tmpfs "$MOUNTPOINT"
+
+#open rox window to the ramdisk
+which rox >/dev/null 2>&1 && rox "$MOUNTPOINT"
+
+#symlink into /media
+ln -s /initrd/ramdisk2 /media/ramdisk
+
+#show where it was mounted, then wait for unmounting
+Xdialog --title "Ramdisk" --ok-label "Unmount" --msgbox "A $SIZE MB ramdisk is now accessable.\n\nClick 'Unmount' to unmount it." 0 0
+
+if [ $? -eq 0 ]; then
+	#close any windows open to the ramdisk
+	which rox >/dev/null 2>&1 && rox -D "$MOUNTPOINT"
+
+	#unmount the ramdisk
+	umount "$MOUNTPOINT"
+	#remove symlink in /media
+	rm /media/ramdisk
+fi
